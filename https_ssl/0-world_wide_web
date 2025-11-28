@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
-# This script displays the DNS record type and IP address of specified subdomains
+# Install dig (part of dnsutils) if not present
+if ! command -v dig &> /dev/null
+then
+    # Use 'apt-get' which is commonly available in these base images
+    sudo apt-get update
+    sudo apt-get install -y dnsutils
+fi
 
-# Function to get subdomain info
+# Function to get subdomain info and format the output
 get_subdomain_info() {
     local domain=$1
     local subdomain=$2
     
-    # Use dig to get the full ANSWER line, excluding comments, then process with awk
+    # Use dig to query the A record for the full domain
+    # grep -E to filter for the ANSWER line containing the 'A' record (and ensure it's not a comment)
     # shellcheck disable=SC2086
-    dig ${subdomain}.${domain} | grep -E '^[^;].*\sA\s' | awk -v sd="$subdomain" '{
+    dig ${subdomain}.${domain} | grep -E '^[[:alnum:]].*\sA\s' | awk -v sd="$subdomain" '{
         # $4 is the record type (A)
         # $5 is the destination IP
         # sd is the passed subdomain (www, lb-01, etc.)
@@ -17,12 +24,6 @@ get_subdomain_info() {
 }
 
 # --- Main Script Logic ---
-# Check if domain parameter is provided
-if [ -z "$1" ]; then
-    # Handle the case where the domain is missing, though the task says not to
-    exit 1 
-fi
-
 domain=$1
 subdomain=$2
 
